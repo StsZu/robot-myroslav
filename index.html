@@ -1103,7 +1103,10 @@ async function fetchGeminiWithRetry(prompt, systemInstruction, retries = 5) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ prompt, systemInstruction })
             });
-            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            if (!resp.ok) {
+                const err = await resp.json().catch(() => ({}));
+                throw new Error(err?.error?.message || `HTTP ${resp.status}`);
+            }
             const data = await resp.json();
             return data.candidates?.[0]?.content?.parts?.[0]?.text ?? "Немає відповіді";
         } catch(e) {
