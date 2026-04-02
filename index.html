@@ -1,0 +1,1152 @@
+<!DOCTYPE html>
+<html lang="uk" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Мій Самобалансуючий Робот 🤖 — Мирослав</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        brand: {
+                            50:  '#f0fdf4',
+                            100: '#dcfce7',
+                            200: '#bbf7d0',
+                            400: '#4ade80',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                            900: '#14532d',
+                            950: '#052e16',
+                        },
+                        robot: {
+                            50:  '#eff6ff',
+                            100: '#dbeafe',
+                            400: '#60a5fa',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                            900: '#1e3a8a',
+                            950: '#172554',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #4ade80; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #16a34a; }
+
+        .glass-nav {
+            background: rgba(255,255,255,0.88);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+        }
+
+        @keyframes popIn {
+            0%   { opacity: 0; transform: scale(0.85) translateY(12px); }
+            100% { opacity: 1; transform: scale(1)    translateY(0); }
+        }
+        .tts-tooltip-animate { animation: popIn 0.22s cubic-bezier(0.16,1,0.3,1) forwards; }
+
+        @keyframes float {
+            0%,100% { transform: translateY(0px); }
+            50%      { transform: translateY(-16px); }
+        }
+        .robot-float { animation: float 3s ease-in-out infinite; }
+
+        @keyframes spin-slow {
+            from { transform: rotate(0deg); }
+            to   { transform: rotate(360deg); }
+        }
+        .spin-slow { animation: spin-slow 8s linear infinite; }
+
+        .prose p { margin-bottom: 0.8em; }
+        .prose strong { font-weight: 700; color: #0f172a; }
+
+        .line-play-btn { opacity: 0; transition: opacity 0.15s; }
+        .vocab-row:hover .line-play-btn { opacity: 1; }
+
+        /* Quiz styles */
+        .quiz-option { cursor: pointer; transition: all 0.2s; }
+        .quiz-option:hover { transform: translateX(4px); }
+        .quiz-option.correct { background: #dcfce7; border-color: #16a34a; }
+        .quiz-option.wrong   { background: #fee2e2; border-color: #dc2626; }
+        .quiz-option.disabled { pointer-events: none; }
+
+        /* Story highlight */
+        .story-word {
+            background: linear-gradient(120deg, #bbf7d0 0%, #bfdbfe 100%);
+            padding: 1px 6px; border-radius: 4px; font-weight: 600;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased selection:bg-green-200 selection:text-green-900 relative">
+
+<!-- ======================== SELECTION TOOLBAR ======================== -->
+<div id="selection-toolbar" class="absolute z-[100] hidden tts-tooltip-animate bg-slate-900 border border-slate-700 text-white rounded-xl shadow-2xl flex items-center overflow-hidden">
+    <button id="tts-btn" class="px-4 py-2.5 flex items-center gap-2 hover:bg-slate-800 transition-colors focus:outline-none group border-r border-slate-700">
+        <i id="tts-icon" class="ph-fill ph-speaker-high text-brand-400 text-lg"></i>
+        <span id="tts-text" class="text-sm font-semibold">Say it</span>
+    </button>
+    <button id="translate-btn" class="px-4 py-2.5 flex items-center gap-2 hover:bg-slate-800 transition-colors focus:outline-none group">
+        <i id="translate-icon" class="ph-bold ph-translate text-sky-400 text-lg"></i>
+        <span id="translate-text" class="text-sm font-semibold">Translate it</span>
+    </button>
+</div>
+
+<!-- ======================== TRANSLATION POPUP ======================== -->
+<div id="translation-popup" class="absolute z-[101] hidden tts-tooltip-animate bg-white border border-slate-200 rounded-2xl shadow-2xl p-5 w-[360px] max-w-[90vw]">
+    <div class="flex justify-between items-center mb-3 border-b border-slate-100 pb-3">
+        <h4 class="text-xs font-bold uppercase tracking-wider text-sky-600 flex items-center gap-1.5">
+            <i class="ph-bold ph-translate text-sm"></i> Переклад (Translation)
+        </h4>
+        <button id="close-translation" class="text-slate-400 hover:text-slate-700 transition-colors">
+            <i class="ph-bold ph-x text-base"></i>
+        </button>
+    </div>
+    <div id="translation-content" class="text-sm leading-relaxed text-slate-700"></div>
+</div>
+
+<!-- ======================== NAVIGATION ======================== -->
+<nav class="fixed w-full z-50 glass-nav border-b border-slate-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between h-16 items-center">
+            <div class="flex-shrink-0 flex items-center gap-2">
+                <span class="text-3xl">🤖</span>
+                <span class="font-extrabold text-lg text-slate-900">Мій <span class="text-brand-600">Робот</span></span>
+            </div>
+            <div class="hidden md:flex space-x-5 text-sm font-medium">
+                <a href="#robot"      class="text-slate-600 hover:text-brand-600 transition-colors">Що таке робот?</a>
+                <a href="#arduino"    class="text-slate-600 hover:text-robot-600 transition-colors">Arduino</a>
+                <a href="#raspberry"  class="text-slate-600 hover:text-purple-600 transition-colors">Raspberry Pi</a>
+                <a href="#balance"    class="text-slate-600 hover:text-amber-600 transition-colors">Баланс</a>
+                <a href="#dictionary" class="text-slate-600 hover:text-brand-600 transition-colors">Словник</a>
+                <a href="#quiz"       class="text-robot-600 hover:text-robot-700 font-bold flex items-center gap-1">
+                    <i class="ph-fill ph-trophy text-amber-500"></i> Тест
+                </a>
+            </div>
+            <span class="hidden lg:inline-flex items-center gap-1.5 text-xs font-medium bg-brand-50 text-brand-700 border border-brand-200 px-3 py-1.5 rounded-full">
+                <i class="ph ph-cursor-text"></i> Виділи текст → послухай
+            </span>
+        </div>
+    </div>
+</nav>
+
+<!-- ======================== HERO ======================== -->
+<header class="relative bg-gradient-to-br from-robot-950 via-robot-900 to-brand-950 pt-32 pb-24 overflow-hidden">
+    <div class="absolute inset-0 overflow-hidden pointer-events-none">
+        <div class="absolute top-10 left-10 w-64 h-64 bg-brand-500/10 rounded-full blur-3xl"></div>
+        <div class="absolute bottom-10 right-10 w-80 h-80 bg-robot-500/15 rounded-full blur-3xl"></div>
+        <!-- Animated circles -->
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] border border-white/5 rounded-full spin-slow"></div>
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] border border-white/5 rounded-full" style="animation: spin-slow 12s linear infinite reverse;"></div>
+    </div>
+
+    <div class="relative max-w-5xl mx-auto px-4 text-center z-10">
+        <!-- Robot emoji floating -->
+        <div class="robot-float inline-block mb-6 text-9xl select-none">🤖</div>
+
+        <div class="inline-flex items-center px-4 py-1.5 rounded-full text-xs font-bold bg-brand-900/80 text-brand-200 border border-brand-700 mb-5">
+            🚀 Для Мирослава — майбутнього інженера-робототехніка!
+        </div>
+        <h1 class="text-4xl md:text-6xl font-extrabold text-white tracking-tight mb-5 leading-tight">
+            Як працює мій<br>
+            <span class="text-transparent bg-clip-text bg-gradient-to-r from-brand-400 to-robot-400">
+                самобалансуючий робот
+            </span>
+        </h1>
+        <p class="max-w-2xl mx-auto text-lg text-slate-300 mb-8">
+            Дізнайся все про <strong class="text-white">Arduino</strong>, <strong class="text-white">Raspberry Pi</strong>,
+            моторчики, програми і як робот не падає! — <em class="text-brand-300">Learn how a self-balancing robot works!</em>
+        </p>
+
+        <!-- Stats bar -->
+        <div class="flex flex-wrap justify-center gap-6 mt-8">
+            <div class="bg-white/10 backdrop-blur-sm rounded-2xl px-6 py-4 border border-white/20">
+                <div class="text-3xl font-black text-white">2</div>
+                <div class="text-xs text-slate-300 mt-1">комп'ютери<br><em class="text-slate-400">computers</em></div>
+            </div>
+            <div class="bg-white/10 backdrop-blur-sm rounded-2xl px-6 py-4 border border-white/20">
+                <div class="text-3xl font-black text-white">2</div>
+                <div class="text-xs text-slate-300 mt-1">колеса<br><em class="text-slate-400">wheels</em></div>
+            </div>
+            <div class="bg-white/10 backdrop-blur-sm rounded-2xl px-6 py-4 border border-white/20">
+                <div class="text-3xl font-black text-white">∞</div>
+                <div class="text-xs text-slate-300 mt-1">рівновага<br><em class="text-slate-400">balance</em></div>
+            </div>
+            <div class="bg-white/10 backdrop-blur-sm rounded-2xl px-6 py-4 border border-white/20">
+                <div class="text-3xl font-black text-white">Wi-Fi</div>
+                <div class="text-xs text-slate-300 mt-1">управління<br><em class="text-slate-400">control</em></div>
+            </div>
+        </div>
+
+        <a href="#robot" class="mt-10 inline-flex items-center gap-2 px-8 py-4 bg-brand-500 hover:bg-brand-400 text-white font-bold rounded-xl shadow-lg shadow-brand-900/50 transition-all text-base">
+            <i class="ph-fill ph-rocket-launch"></i> Починаємо! — Let's start!
+        </a>
+    </div>
+</header>
+
+<!-- ======================== MAIN CONTENT ======================== -->
+<main class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-16 space-y-28">
+
+    <!-- ===== SECTION 1: What is a robot ===== -->
+    <section id="robot" class="scroll-mt-24">
+        <div class="flex items-center gap-3 mb-2">
+            <span class="w-10 h-10 bg-brand-100 rounded-xl flex items-center justify-center text-2xl">🤖</span>
+            <span class="text-xs font-bold text-brand-600 uppercase tracking-widest">Частина 1 — Part 1</span>
+        </div>
+        <h2 class="text-3xl md:text-4xl font-extrabold text-slate-900 mb-8">
+            Що таке <span class="text-brand-600">робот</span>?
+            <span class="text-2xl ml-2">— <em class="text-slate-500 font-normal text-xl">What is a robot?</em></span>
+        </h2>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div class="lg:col-span-2 space-y-5 text-slate-700 leading-relaxed text-[17px]">
+                <p>
+                    Уяви собі: посеред кімнати стоїть <span class="story-word">робот (robot)</span> — на двох колесах!
+                    Він не падає, хоча стоїть прямо, як олівець. Це чудо?
+                    Ні — це <span class="story-word">технологія (technology)</span>!
+                </p>
+                <p>
+                    <strong>Робот</strong> — це машина, яка вміє виконувати завдання самостійно або за командами людини.
+                    Він має <span class="story-word">датчики (sensors)</span>, щоб "відчувати" світ навколо,
+                    <span class="story-word">мотори (motors)</span>, щоб рухатись, і
+                    <span class="story-word">комп'ютери (computers)</span>, щоб думати!
+                </p>
+                <p>
+                    Наш робот називається <strong>ELEGOO Tumbller</strong> — і він
+                    <span class="story-word">самобалансуючий (self-balancing)</span>.
+                    Це означає, що він сам утримує рівновагу, як циркач на канаті. Тільки без канату!
+                </p>
+                <div class="bg-brand-50 border-l-4 border-brand-500 p-5 rounded-r-xl">
+                    <p class="text-brand-900 font-medium">
+                        💡 <strong>Цікавий факт!</strong> Слово <em>"robot"</em> вигадав чеський письменник
+                        Карел Чапек у 1920 році. Воно походить від чеського слова <em>"robota"</em> — важка праця.
+                        Сьогодні роботи допомагають людям на фабриках, в лікарнях, і навіть у космосі!
+                    </p>
+                </div>
+            </div>
+
+            <!-- Parts card -->
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sticky top-24 h-fit">
+                <h4 class="font-bold text-slate-900 mb-5 text-base flex items-center gap-2">
+                    <i class="ph-fill ph-puzzle-piece text-brand-600 text-xl"></i>
+                    З чого складається робот?
+                </h4>
+                <ul class="space-y-4">
+                    <li class="flex items-start gap-3">
+                        <span class="text-2xl mt-0.5">🟦</span>
+                        <div>
+                            <p class="font-semibold text-sm text-slate-900">Arduino Nano</p>
+                            <p class="text-xs text-slate-500">Керує моторами і балансом</p>
+                            <p class="text-xs text-robot-500 italic">Controls motors & balance</p>
+                        </div>
+                    </li>
+                    <li class="flex items-start gap-3">
+                        <span class="text-2xl mt-0.5">🟥</span>
+                        <div>
+                            <p class="font-semibold text-sm text-slate-900">Raspberry Pi Zero 2W</p>
+                            <p class="text-xs text-slate-500">Wi-Fi, сервер, управління</p>
+                            <p class="text-xs text-purple-500 italic">Wi-Fi, server, control</p>
+                        </div>
+                    </li>
+                    <li class="flex items-start gap-3">
+                        <span class="text-2xl mt-0.5">⚙️</span>
+                        <div>
+                            <p class="font-semibold text-sm text-slate-900">Мотори (Motors)</p>
+                            <p class="text-xs text-slate-500">Крутять колеса</p>
+                            <p class="text-xs text-amber-500 italic">Spin the wheels</p>
+                        </div>
+                    </li>
+                    <li class="flex items-start gap-3">
+                        <span class="text-2xl mt-0.5">📡</span>
+                        <div>
+                            <p class="font-semibold text-sm text-slate-900">Гіроскоп (Gyroscope)</p>
+                            <p class="text-xs text-slate-500">Вимірює нахил</p>
+                            <p class="text-xs text-rose-500 italic">Measures tilt angle</p>
+                        </div>
+                    </li>
+                    <li class="flex items-start gap-3">
+                        <span class="text-2xl mt-0.5">🔋</span>
+                        <div>
+                            <p class="font-semibold text-sm text-slate-900">Батарея (Battery)</p>
+                            <p class="text-xs text-slate-500">Живлення для всього</p>
+                            <p class="text-xs text-green-500 italic">Power for everything</p>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== SECTION 2: Arduino ===== -->
+    <section id="arduino" class="scroll-mt-24">
+        <div class="flex items-center gap-3 mb-2">
+            <span class="w-10 h-10 bg-robot-100 rounded-xl flex items-center justify-center text-2xl">🟦</span>
+            <span class="text-xs font-bold text-robot-600 uppercase tracking-widest">Частина 2 — Part 2</span>
+        </div>
+        <h2 class="text-3xl md:text-4xl font-extrabold text-slate-900 mb-8">
+            <span class="text-robot-600">Arduino</span> —
+            <em class="font-normal text-slate-500 text-2xl">мозок рухів</em>
+        </h2>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+            <div class="space-y-5 text-slate-700 leading-relaxed text-[17px]">
+                <p>
+                    <strong>Arduino Nano</strong> — це маленька синя плата, менша за твій палець!
+                    Але всередині неї є мікросхема — <span class="story-word">мікроконтролер (microcontroller)</span>.
+                    Це як крихітний комп'ютер, який виконує одну важливу задачу дуже швидко і точно.
+                </p>
+                <p>
+                    Arduino отримує дані від <span class="story-word">гіроскопа (gyroscope)</span>
+                    та акселерометра — датчиків, які вимірюють, як нахилений робот.
+                    Потім Arduino дуже швидко (500 разів на секунду!) обчислює,
+                    як потрібно крутити моторами, щоб робот не впав.
+                </p>
+                <p>
+                    Arduino розуміє прості <span class="story-word">команди (commands)</span>:
+                    <code class="bg-slate-100 px-2 py-0.5 rounded text-robot-700 font-mono">f</code> — вперед (<em>forward</em>),
+                    <code class="bg-slate-100 px-2 py-0.5 rounded text-robot-700 font-mono">b</code> — назад (<em>backward</em>),
+                    <code class="bg-slate-100 px-2 py-0.5 rounded text-robot-700 font-mono">l</code> — вліво (<em>left</em>),
+                    <code class="bg-slate-100 px-2 py-0.5 rounded text-robot-700 font-mono">r</code> — вправо (<em>right</em>),
+                    <code class="bg-slate-100 px-2 py-0.5 rounded text-robot-700 font-mono">s</code> — стоп (<em>stop</em>).
+                </p>
+            </div>
+
+            <!-- Arduino terminal simulation -->
+            <div class="bg-slate-900 rounded-2xl shadow-xl border border-slate-700 overflow-hidden">
+                <div class="bg-slate-800 px-5 py-3 border-b border-slate-700 flex items-center gap-2">
+                    <div class="w-3 h-3 rounded-full bg-rose-500"></div>
+                    <div class="w-3 h-3 rounded-full bg-amber-500"></div>
+                    <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                    <span class="ml-2 text-xs font-mono text-slate-400">Arduino_Nano.ino — Serial Monitor</span>
+                </div>
+                <div class="p-6 font-mono text-sm space-y-3">
+                    <div class="text-slate-400 text-xs">// Програма на мові C++</div>
+                    <div class="text-green-400">→ Отримую команду: <span class="text-white font-bold">"f"</span></div>
+                    <div class="text-sky-400">⚙ Кут нахилу: <span class="text-white">+2.3°</span></div>
+                    <div class="text-sky-400">⚙ Цільовий кут: <span class="text-white">0.0°</span></div>
+                    <div class="text-amber-400">→ Мотор Лівий: <span class="text-white">+180 RPM</span></div>
+                    <div class="text-amber-400">→ Мотор Правий: <span class="text-white">+180 RPM</span></div>
+                    <div class="text-slate-500 text-xs mt-2">// RPM = Revolutions Per Minute</div>
+                    <div class="text-slate-500 text-xs">// обертів на хвилину</div>
+                    <div class="text-green-400 mt-2">✓ Робот рухається вперед!</div>
+                    <div class="text-slate-500 animate-pulse">▌</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Arduino language -->
+        <div class="bg-robot-50 border border-robot-200 rounded-2xl p-6">
+            <h4 class="font-bold text-robot-900 mb-3 flex items-center gap-2 text-lg">
+                <i class="ph-fill ph-code text-robot-600"></i>
+                Мова програмування Arduino — <em class="font-normal text-robot-600">C++</em>
+            </h4>
+            <p class="text-robot-800 text-[15px] leading-relaxed">
+                Arduino програмують мовою <strong>C++</strong> (читається "сі-плюс-плюс").
+                Це дуже швидка мова — ідеальна для мікроконтролерів.
+                <em>C++ is a very fast programming language — perfect for microcontrollers.</em>
+                Програміст пише інструкції, завантажує їх на плату через
+                <span class="story-word">USB кабель (USB cable)</span>, і Arduino їх запам'ятовує назавжди!
+            </p>
+        </div>
+    </section>
+
+    <!-- ===== SECTION 3: Raspberry Pi ===== -->
+    <section id="raspberry" class="scroll-mt-24">
+        <div class="flex items-center gap-3 mb-2">
+            <span class="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center text-2xl">🟥</span>
+            <span class="text-xs font-bold text-purple-600 uppercase tracking-widest">Частина 3 — Part 3</span>
+        </div>
+        <h2 class="text-3xl md:text-4xl font-extrabold text-slate-900 mb-8">
+            <span class="text-purple-600">Raspberry Pi</span> —
+            <em class="font-normal text-slate-500 text-2xl">мозок зв'язку</em>
+        </h2>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+            <!-- Terminal simulation -->
+            <div class="bg-slate-900 rounded-2xl shadow-xl border border-slate-700 overflow-hidden order-last md:order-first">
+                <div class="bg-slate-800 px-5 py-3 border-b border-slate-700 flex items-center gap-2">
+                    <div class="w-3 h-3 rounded-full bg-rose-500"></div>
+                    <div class="w-3 h-3 rounded-full bg-amber-500"></div>
+                    <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                    <span class="ml-2 text-xs font-mono text-slate-400">pi@raspberrypi: tumbller.py</span>
+                </div>
+                <div class="p-6 font-mono text-sm space-y-2.5">
+                    <div class="text-purple-400">$ python3 tumbller.py</div>
+                    <div class="text-green-400">✓ Flask server started!</div>
+                    <div class="text-slate-400 text-xs">// http://10.0.0.23:5000</div>
+                    <div class="text-slate-300 mt-2">Waiting for commands...</div>
+                    <div class="text-sky-400 mt-2">← Phone sends: <span class="text-white">"f"</span></div>
+                    <div class="text-amber-400">→ Arduino receives: <span class="text-white">"f"</span></div>
+                    <div class="text-green-400">✓ Robot moves forward!</div>
+                    <div class="text-slate-500 text-xs mt-2">// Flask — веб-сервер на Python</div>
+                    <div class="text-slate-500 animate-pulse">▌</div>
+                </div>
+            </div>
+
+            <div class="space-y-5 text-slate-700 leading-relaxed text-[17px]">
+                <p>
+                    <strong>Raspberry Pi Zero 2W</strong> — це повноцінний маленький комп'ютер!
+                    Він менший за кредитну картку, але вміє підключатись до
+                    <span class="story-word">Wi-Fi</span> і запускати справжні програми.
+                </p>
+                <p>
+                    На Raspberry Pi встановлена операційна система
+                    <span class="story-word">Linux</span> і програма на мові
+                    <span class="story-word">Python (Пайтон)</span>.
+                    Програма запускає <span class="story-word">веб-сервер (web server)</span> —
+                    це як маленький сайт всередині робота!
+                </p>
+                <p>
+                    Коли ти натискаєш кнопку на телефоні через
+                    <span class="story-word">браузер (browser)</span>,
+                    телефон відправляє команду на Raspberry Pi по Wi-Fi.
+                    Raspberry Pi отримує команду і пересилає її до Arduino через
+                    <span class="story-word">кабель USB (USB cable)</span>.
+                    Arduino крутить моторами. Ось так просто!
+                </p>
+                <div class="bg-purple-50 border-l-4 border-purple-500 p-4 rounded-r-xl text-sm">
+                    <strong class="text-purple-900">IP адреса:</strong>
+                    <span class="font-mono text-purple-700"> 10.0.0.23</span>
+                    — це як "домашня адреса" Raspberry Pi в мережі Wi-Fi.
+                    <em class="text-purple-500">Like a home address on the Wi-Fi network.</em>
+                </div>
+            </div>
+        </div>
+
+        <!-- Flow diagram -->
+        <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+            <h4 class="font-bold text-slate-900 mb-6 text-center text-lg">
+                Як команда подорожує від телефону до коліс 🛤️
+                <em class="font-normal text-slate-500 text-sm ml-2">— How a command travels</em>
+            </h4>
+            <div class="flex flex-wrap items-center justify-center gap-3 text-sm font-medium">
+                <div class="flex flex-col items-center gap-2 bg-slate-50 rounded-xl p-4 border border-slate-200 min-w-[100px]">
+                    <span class="text-3xl">📱</span>
+                    <span class="text-slate-700 text-center">Телефон<br><em class="text-slate-400 font-normal text-xs">Phone</em></span>
+                </div>
+                <div class="flex flex-col items-center text-slate-400">
+                    <i class="ph ph-arrow-right text-xl"></i>
+                    <span class="text-xs">Wi-Fi</span>
+                </div>
+                <div class="flex flex-col items-center gap-2 bg-purple-50 rounded-xl p-4 border border-purple-200 min-w-[100px]">
+                    <span class="text-3xl">🟥</span>
+                    <span class="text-purple-700 text-center">Raspberry Pi<br><em class="text-slate-400 font-normal text-xs">Python server</em></span>
+                </div>
+                <div class="flex flex-col items-center text-slate-400">
+                    <i class="ph ph-arrow-right text-xl"></i>
+                    <span class="text-xs">USB</span>
+                </div>
+                <div class="flex flex-col items-center gap-2 bg-robot-50 rounded-xl p-4 border border-robot-200 min-w-[100px]">
+                    <span class="text-3xl">🟦</span>
+                    <span class="text-robot-700 text-center">Arduino<br><em class="text-slate-400 font-normal text-xs">C++ code</em></span>
+                </div>
+                <div class="flex flex-col items-center text-slate-400">
+                    <i class="ph ph-arrow-right text-xl"></i>
+                    <span class="text-xs">PWM</span>
+                </div>
+                <div class="flex flex-col items-center gap-2 bg-amber-50 rounded-xl p-4 border border-amber-200 min-w-[100px]">
+                    <span class="text-3xl">⚙️</span>
+                    <span class="text-amber-700 text-center">Мотори<br><em class="text-slate-400 font-normal text-xs">Motors</em></span>
+                </div>
+                <div class="flex flex-col items-center text-slate-400">
+                    <i class="ph ph-arrow-right text-xl"></i>
+                    <span class="text-xs"></span>
+                </div>
+                <div class="flex flex-col items-center gap-2 bg-brand-50 rounded-xl p-4 border border-brand-200 min-w-[100px]">
+                    <span class="text-3xl">🛞</span>
+                    <span class="text-brand-700 text-center">Колеса<br><em class="text-slate-400 font-normal text-xs">Wheels</em></span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== SECTION 4: Balance ===== -->
+    <section id="balance" class="scroll-mt-24">
+        <div class="flex items-center gap-3 mb-2">
+            <span class="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center text-2xl">⚖️</span>
+            <span class="text-xs font-bold text-amber-600 uppercase tracking-widest">Частина 4 — Part 4</span>
+        </div>
+        <h2 class="text-3xl md:text-4xl font-extrabold text-slate-900 mb-8">
+            Як робот <span class="text-amber-600">балансує</span>?
+            <em class="font-normal text-slate-500 text-2xl"> — How does it balance?</em>
+        </h2>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-10 mb-8">
+            <div class="space-y-5 text-slate-700 leading-relaxed text-[17px]">
+                <p>
+                    Ти коли-небудь намагався балансувати олівець на пальці?
+                    Це дуже важко! Але наш робот робить це весь час.
+                    Секрет — у <span class="story-word">гіроскопі (gyroscope)</span> та
+                    алгоритмі <span class="story-word">PID</span>.
+                </p>
+                <p>
+                    <strong>Гіроскоп</strong> — це датчик, який вимірює, на скільки градусів
+                    нахилений робот. <em>It measures the tilt angle in degrees.</em>
+                    Він робить це дуже швидко — сотні разів на секунду!
+                </p>
+                <p>
+                    Коли гіроскоп каже "ти нахиляєшся вперед на 3°",
+                    Arduino негайно розраховує: "потрібно крутити колеса вперед,
+                    щоб зловити рівновагу!" — і робот не падає.
+                    Це як ти сам тримаєш рівновагу, але 500 разів на секунду!
+                </p>
+                <div class="bg-amber-50 border border-amber-200 rounded-xl p-5">
+                    <h5 class="font-bold text-amber-900 mb-2 flex items-center gap-2">
+                        <i class="ph-fill ph-lightbulb text-amber-500"></i>
+                        Алгоритм PID — що це?
+                    </h5>
+                    <p class="text-amber-800 text-sm leading-relaxed">
+                        <strong>PID</strong> — це математичний алгоритм.
+                        <em>P</em> = Proportional (пропорційний),
+                        <em>I</em> = Integral (інтегральний),
+                        <em>D</em> = Derivative (похідний).
+                        Він розраховує, наскільки сильно крутити моторами,
+                        залежно від кута нахилу. Це як мозок балансування!
+                    </p>
+                </div>
+            </div>
+
+            <!-- Balance visualization -->
+            <div class="bg-slate-900 rounded-2xl overflow-hidden border border-slate-700 shadow-xl">
+                <div class="bg-slate-800 px-5 py-3 border-b border-slate-700 flex items-center gap-2">
+                    <div class="w-3 h-3 rounded-full bg-rose-500"></div>
+                    <div class="w-3 h-3 rounded-full bg-amber-500"></div>
+                    <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                    <span class="ml-2 text-xs font-mono text-slate-400">balance_loop.ino</span>
+                </div>
+                <div class="p-6 font-mono text-sm space-y-3">
+                    <div class="text-slate-400 text-xs">// Цикл балансування (500 Гц)</div>
+                    <div class="text-purple-400">float angle = gyroscope.<span class="text-white">readAngle()</span>;</div>
+                    <div class="text-slate-400 text-xs">// angle = поточний кут нахилу</div>
+                    <div class="text-sky-400 mt-2">float error = target - angle;</div>
+                    <div class="text-slate-400 text-xs">// error = різниця від ідеального</div>
+                    <div class="text-amber-400 mt-2">float output = PID.<span class="text-white">calculate(error)</span>;</div>
+                    <div class="text-slate-400 text-xs">// output = сила моторів</div>
+                    <div class="text-green-400 mt-2">motors.<span class="text-white">setSpeed(output)</span>;</div>
+                    <div class="text-slate-400 text-xs">// Встановити швидкість</div>
+                    <div class="border-t border-slate-700 mt-4 pt-3">
+                        <div class="text-xs text-slate-500">Кут: <span class="text-green-400">+2.3°</span> → Мотори: <span class="text-amber-400">+180 RPM</span></div>
+                        <div class="text-xs text-slate-500">Кут: <span class="text-sky-400">-1.1°</span> → Мотори: <span class="text-amber-400">-90 RPM</span></div>
+                        <div class="text-xs text-slate-500">Кут: <span class="text-green-400">0.0°</span> → Мотори: <span class="text-slate-400">0 RPM ✓</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modes -->
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <div class="bg-white rounded-xl border border-slate-200 p-4 text-center shadow-sm hover:shadow-md transition-shadow">
+                <div class="text-2xl mb-2">🤸</div>
+                <div class="font-bold text-slate-900 text-sm">Follow</div>
+                <div class="text-xs text-slate-500">Слідує за об'єктом</div>
+                <div class="text-xs text-robot-400 italic mt-1">Follows objects</div>
+            </div>
+            <div class="bg-white rounded-xl border border-slate-200 p-4 text-center shadow-sm hover:shadow-md transition-shadow">
+                <div class="text-2xl mb-2">🚫</div>
+                <div class="font-bold text-slate-900 text-sm">Avoid</div>
+                <div class="text-xs text-slate-500">Обходить перешкоди</div>
+                <div class="text-xs text-robot-400 italic mt-1">Avoids obstacles</div>
+            </div>
+            <div class="bg-white rounded-xl border border-slate-200 p-4 text-center shadow-sm hover:shadow-md transition-shadow">
+                <div class="text-2xl mb-2">🌈</div>
+                <div class="font-bold text-slate-900 text-sm">RGB</div>
+                <div class="text-xs text-slate-500">Кольорові вогні</div>
+                <div class="text-xs text-robot-400 italic mt-1">Colorful lights</div>
+            </div>
+            <div class="bg-white rounded-xl border border-slate-200 p-4 text-center shadow-sm hover:shadow-md transition-shadow">
+                <div class="text-2xl mb-2">🧍</div>
+                <div class="font-bold text-slate-900 text-sm">Stand</div>
+                <div class="text-xs text-slate-500">Стоїть на місці</div>
+                <div class="text-xs text-robot-400 italic mt-1">Stands still</div>
+            </div>
+            <div class="bg-white rounded-xl border border-slate-200 p-4 text-center shadow-sm hover:shadow-md transition-shadow">
+                <div class="text-2xl mb-2">💤</div>
+                <div class="font-bold text-slate-900 text-sm">Down</div>
+                <div class="text-xs text-slate-500">Лягає відпочивати</div>
+                <div class="text-xs text-robot-400 italic mt-1">Lies down to rest</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===== SECTION 5: Dictionary ===== -->
+    <section id="dictionary" class="scroll-mt-24">
+        <div class="flex items-center gap-3 mb-2">
+            <span class="w-10 h-10 bg-brand-100 rounded-xl flex items-center justify-center text-2xl">📚</span>
+            <span class="text-xs font-bold text-brand-600 uppercase tracking-widest">Словник — Dictionary</span>
+        </div>
+        <h2 class="text-3xl md:text-4xl font-extrabold text-slate-900 mb-3">
+            Словник <span class="text-brand-600">робота</span>
+        </h2>
+        <p class="text-slate-500 mb-8">
+            Натисни кнопку <i class="ph-fill ph-speaker-high text-brand-600"></i> щоб послухати слово!
+            <em class="text-slate-400">Click the speaker button to hear the word!</em>
+        </p>
+
+        <div id="vocab-container" class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden"></div>
+    </section>
+
+    <!-- ===== SECTION 6: QUIZ ===== -->
+    <section id="quiz" class="scroll-mt-24">
+        <div class="flex items-center gap-3 mb-2">
+            <span class="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center text-2xl">🏆</span>
+            <span class="text-xs font-bold text-amber-600 uppercase tracking-widest">Тест — Quiz</span>
+        </div>
+        <h2 class="text-3xl md:text-4xl font-extrabold text-slate-900 mb-3">
+            Перевір себе! <span class="text-amber-600">10 запитань</span>
+        </h2>
+        <p class="text-slate-500 mb-8">
+            Обери правильну відповідь і дізнайся пояснення!
+            <em class="text-slate-400">Choose the correct answer and learn why!</em>
+        </p>
+
+        <!-- Score display -->
+        <div id="quiz-score-bar" class="hidden bg-gradient-to-r from-brand-500 to-robot-500 rounded-2xl p-6 text-white text-center mb-8">
+            <div class="text-5xl font-black mb-2" id="final-score">0/10</div>
+            <div id="score-message" class="text-lg font-semibold"></div>
+        </div>
+
+        <div id="quiz-container" class="space-y-8"></div>
+
+        <button id="quiz-reset-btn" onclick="resetQuiz()" class="hidden mt-8 mx-auto flex items-center gap-2 px-8 py-4 bg-amber-500 hover:bg-amber-400 text-white font-bold rounded-xl shadow-lg transition-all text-base">
+            <i class="ph-fill ph-arrow-clockwise"></i> Спробувати ще раз! — Try again!
+        </button>
+    </section>
+
+    <!-- ===== SECTION 7: AI Assistant ===== -->
+    <section id="ai-tools" class="scroll-mt-24">
+        <div class="text-center mb-10">
+            <span class="inline-flex items-center px-4 py-1.5 rounded-full text-xs font-bold bg-brand-100 text-brand-700 border border-brand-200 mb-4">
+                <i class="ph-fill ph-sparkle mr-1.5"></i> Powered by Gemini AI
+            </span>
+            <h2 class="text-3xl md:text-4xl font-extrabold text-slate-900">AI Помічник 🤖</h2>
+            <p class="text-slate-500 mt-2">Запитай все що хочеш про робота!
+            <em class="text-slate-400">Ask anything about robots!</em></p>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 max-w-2xl mx-auto">
+            <div class="flex items-center gap-3 mb-5">
+                <div class="w-12 h-12 rounded-full bg-gradient-to-br from-brand-400 to-robot-500 flex items-center justify-center text-2xl">🤖</div>
+                <div>
+                    <h3 class="text-xl font-bold text-slate-900">Запитай AI!</h3>
+                    <p class="text-sm text-slate-500">Наприклад: "Що таке мотор?" або "How does Arduino work?"</p>
+                </div>
+            </div>
+            <input type="text" id="ask-ai-input"
+                class="w-full rounded-xl border border-slate-300 p-4 text-sm focus:ring-2 focus:ring-brand-500 focus:border-brand-500 mb-4"
+                placeholder="Введи своє запитання... / Type your question..."
+                onkeypress="if(event.key==='Enter') askAI()">
+            <button onclick="askAI()"
+                class="w-full inline-flex items-center justify-center px-5 py-3.5 bg-gradient-to-r from-brand-600 to-robot-600 hover:from-brand-500 hover:to-robot-500 text-white font-bold rounded-xl shadow-md transition-all text-sm">
+                <i class="ph-fill ph-sparkle mr-2"></i> Запитати AI — Ask AI
+            </button>
+            <div id="ask-ai-result" class="hidden mt-5 p-5 rounded-xl bg-slate-900 border border-slate-700 text-sm text-slate-200 prose prose-sm prose-invert"></div>
+        </div>
+    </section>
+
+</main>
+
+<!-- ======================== FOOTER ======================== -->
+<footer class="bg-slate-900 py-14 border-t border-slate-800">
+    <div class="max-w-5xl mx-auto px-4 text-center">
+        <div class="text-5xl mb-4">🤖</div>
+        <h3 class="text-white font-extrabold text-xl mb-2">Мирославе, ти молодець!</h3>
+        <p class="text-slate-400 text-sm max-w-xl mx-auto mb-6">
+            Тепер ти знаєш, як працює самобалансуючий робот!
+            Ти вже на шляху стати справжнім інженером-робототехніком.
+            <em>You're on your way to becoming a real robotics engineer!</em>
+        </p>
+        <div class="flex flex-wrap justify-center gap-4 text-xs text-slate-500">
+            <span>🟦 Arduino Nano (ATmega328P)</span>
+            <span>•</span>
+            <span>🟥 Raspberry Pi Zero 2W</span>
+            <span>•</span>
+            <span>⚙️ ELEGOO Tumbller V1.1</span>
+        </div>
+        <p class="text-slate-600 text-xs mt-6">
+            Зроблено з ❤️ для Мирослава — майбутнього робототехніка!
+        </p>
+    </div>
+</footer>
+
+<!-- ======================== SCRIPTS ======================== -->
+<script>
+// ─── API ───────────────────────────────────────────────────────────
+const apiKey = "AIzaSyAuXexsmMPfNM2_lZeAqU6OUaVUkxGAzsU";
+
+// ─── VOCABULARY DATA ───────────────────────────────────────────────
+const vocabData = [
+    // [emoji, ukrainian, english, pronunciation, definition_uk]
+    ["🤖", "Робот",           "Robot",            "RO-bot",        "Машина, яка виконує завдання за програмою"],
+    ["🟦", "Мікроконтролер",  "Microcontroller",  "my-kro-con-TRO-ler", "Маленький комп'ютер на одній мікросхемі"],
+    ["🟥", "Одноплатний комп'ютер", "Single-board computer", "SIN-gl-bord com-PYOO-ter", "Повноцінний комп'ютер на одній платі"],
+    ["📡", "Гіроскоп",        "Gyroscope",        "JY-ro-skope",   "Датчик, що вимірює кут нахилу"],
+    ["📐", "Акселерометр",    "Accelerometer",    "ak-sel-er-OM-e-ter", "Датчик, що вимірює прискорення"],
+    ["⚙️", "Мотор",           "Motor",            "MOH-tor",       "Пристрій, що перетворює електрику в рух"],
+    ["🛞", "Колесо",          "Wheel",            "WEEL",          "Кругла деталь, що крутиться і рухає робота"],
+    ["📶", "Wi-Fi",           "Wi-Fi",            "WY-fy",         "Бездротова мережа для з'єднання пристроїв"],
+    ["💻", "Програма",        "Program",          "PRO-gram",      "Набір інструкцій для комп'ютера"],
+    ["🐍", "Пайтон (мова)",   "Python (language)","PY-thon",       "Проста мова програмування для комп'ютерів"],
+    ["➕", "Сі-плюс-плюс",   "C++ language",     "SEE-plus-plus",  "Швидка мова програмування для Arduino"],
+    ["🌐", "Сервер",          "Server",           "SER-ver",       "Програма, що відповідає на запити мережі"],
+    ["⚖️", "Рівновага",       "Balance",          "BAL-ance",      "Стан, коли предмет не падає в жодну сторону"],
+    ["📊", "Алгоритм",        "Algorithm",        "AL-go-ri-thm",  "Покроковий план вирішення задачі"],
+    ["🔋", "Батарея",         "Battery",          "BAT-er-ee",     "Джерело електричної енергії"],
+    ["📱", "Браузер",         "Browser",          "BROW-zer",      "Програма для перегляду сайтів у телефоні/ПК"],
+    ["🔌", "USB кабель",      "USB cable",        "YOO-es-bee KAY-bl", "Кабель для з'єднання пристроїв і передачі даних"],
+    ["🏠", "IP адреса",       "IP address",       "EYE-pee AD-res", "Унікальна адреса пристрою в мережі"],
+];
+
+function renderVocab() {
+    const c = document.getElementById('vocab-container');
+    vocabData.forEach((row, i) => {
+        const [em, uk, en, pron, def] = row;
+        const bg = i % 2 === 0 ? 'bg-white' : 'bg-slate-50';
+        c.innerHTML += `
+        <div class="vocab-row flex items-center gap-4 px-6 py-4 border-b border-slate-100 last:border-0 hover:bg-brand-50 transition-colors ${bg}">
+            <span class="text-2xl w-8 text-center flex-shrink-0">${em}</span>
+            <div class="flex-1 min-w-0">
+                <div class="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
+                    <span class="font-bold text-slate-900 text-base">${uk}</span>
+                    <span class="text-brand-600 font-semibold text-base">${en}</span>
+                    <span class="text-slate-400 text-xs italic">[${pron}]</span>
+                </div>
+                <p class="text-slate-500 text-sm mt-0.5">${def}</p>
+            </div>
+            <button class="line-play-btn flex-shrink-0 w-9 h-9 rounded-full bg-brand-100 hover:bg-brand-200 flex items-center justify-center text-brand-600 transition-colors"
+                    onclick="playLine('${en}')">
+                <i class="ph-fill ph-speaker-high text-base"></i>
+            </button>
+        </div>`;
+    });
+}
+renderVocab();
+
+// ─── QUIZ DATA ─────────────────────────────────────────────────────
+const quizData = [
+    {
+        q: "Що таке Arduino Nano? — What is Arduino Nano?",
+        emoji: "🟦",
+        options: [
+            "Смартфон для керування роботом по Wi-Fi",
+            "Мікроконтролер, що керує моторами та балансуванням робота",
+            "Батарея, яка живить усі компоненти"
+        ],
+        correct: 1,
+        explanation: "✅ Правильно! Arduino Nano — це мікроконтролер (microcontroller). Він виконує C++ програму, яка читає дані з гіроскопа і керує швидкістю моторів. Це мозок рухів нашого робота! Arduino is the brain of movement — it runs a C++ program to control the motors and keep balance."
+    },
+    {
+        q: "Яку роль виконує Raspberry Pi у нашому роботі? — What does the Raspberry Pi do?",
+        emoji: "🟥",
+        options: [
+            "Вимірює кут нахилу робота",
+            "Керує напругою батареї",
+            "Запускає веб-сервер і з'єднується з телефоном по Wi-Fi"
+        ],
+        correct: 2,
+        explanation: "✅ Правильно! Raspberry Pi запускає програму на Python — Flask сервер. Коли ти натискаєш кнопку в браузері на телефоні, команда летить по Wi-Fi до Raspberry Pi, а потім по USB кабелю до Arduino. Raspberry Pi is the Wi-Fi brain — it connects your phone to the robot!"
+    },
+    {
+        q: "Що таке 'самобалансуючий' (self-balancing) робот?",
+        emoji: "⚖️",
+        options: [
+            "Робот, у якого є три колеса для стійкості",
+            "Робот, який сам утримує рівновагу на двох колесах за допомогою датчиків",
+            "Робот, якого треба тримати рукою щоб він не впав"
+        ],
+        correct: 1,
+        explanation: "✅ Правильно! Self-balancing означає, що робот сам тримає рівновагу — як ти балансуєш, стоячи на одній нозі, але робот робить це 500 разів на секунду! Гіроскоп вимірює нахил, Arduino розраховує корекцію. A self-balancing robot uses sensors and algorithms to stay upright automatically!"
+    },
+    {
+        q: "Що вимірює гіроскоп (gyroscope) у роботі?",
+        emoji: "📡",
+        options: [
+            "Температуру батареї",
+            "Відстань до перешкоди",
+            "Кут нахилу (tilt angle) робота в градусах"
+        ],
+        correct: 2,
+        explanation: "✅ Правильно! Гіроскоп вимірює кут нахилу — наскільки робот відхилився від вертикальної позиції. Якщо кут > 0° — робот нахиляється вперед, Arduino збільшує швидкість моторів. A gyroscope measures the tilt angle — how far the robot is leaning forward or backward."
+    },
+    {
+        q: "Якою мовою програмування написана програма для Arduino?",
+        emoji: "💻",
+        options: [
+            "Python (Пайтон)",
+            "Scratch (Скретч)",
+            "C++ (Сі-плюс-плюс)"
+        ],
+        correct: 2,
+        explanation: "✅ Правильно! Arduino програмують мовою C++. Це дуже швидка і ефективна мова — Arduino виконує мільйони інструкцій за секунду! Python (Пайтон) використовується на Raspberry Pi. C++ is used for Arduino because it's extremely fast — perfect for real-time motor control!"
+    },
+    {
+        q: "Якою мовою програмування написана програма для Raspberry Pi?",
+        emoji: "🐍",
+        options: [
+            "Python (Пайтон) — Flask сервер",
+            "JavaScript",
+            "C++ (Сі-плюс-плюс)"
+        ],
+        correct: 0,
+        explanation: "✅ Правильно! На Raspberry Pi запущена програма tumbller.py — це Python файл. Python використовує бібліотеку Flask для створення веб-сервера. Flask is a Python web framework — it creates a mini-website inside the robot to receive commands from your phone!"
+    },
+    {
+        q: "Яка команда відправляється до Arduino, щоб робот рухався вперед?",
+        emoji: "➡️",
+        options: [
+            'Команда "forward" (слово повністю)',
+            'Команда "f" (одна буква)',
+            'Команда "1" (цифра один)'
+        ],
+        correct: 1,
+        explanation: "✅ Правильно! Arduino розуміє дуже короткі команди: f = forward (вперед), b = backward (назад), l = left (вліво), r = right (вправо), s = stop (стоп). Короткі команди передаються швидше через USB — це важливо для точного керування! Short commands travel faster over USB serial connection."
+    },
+    {
+        q: "Що таке IP адреса (IP address)?",
+        emoji: "🏠",
+        options: [
+            "Назва операційної системи на Raspberry Pi",
+            "Унікальна адреса пристрою в мережі Wi-Fi — як домашня адреса",
+            "Пароль від Wi-Fi мережі"
+        ],
+        correct: 1,
+        explanation: "✅ Правильно! IP адреса — це як домашня адреса, але для пристроїв у мережі. Raspberry Pi нашого робота має адресу 10.0.0.23. Коли ти відкриваєш браузер і пишеш цю адресу — телефон 'знаходить' Raspberry Pi в мережі. IP address is like a home address for devices on a network — it helps your phone find the robot!"
+    },
+    {
+        q: "Що відбувається, коли робот сильно нахиляється і не може скоригувати рівновагу?",
+        emoji: "💥",
+        options: [
+            "Робот автоматично вмикає режим польоту",
+            "Raspberry Pi телефонує на допомогу",
+            "Активується режим Down (4) — робот лягає, щоб не пошкодитись"
+        ],
+        correct: 2,
+        explanation: "✅ Правильно! Якщо нахил занадто великий, Arduino активує режим Down (команда '4'). Це захисний механізм — robot lies down gracefully instead of falling hard. Це як падіння дзюдоїста — він падає правильно, щоб не вдаритись! The Down mode (command '4') is a safety mechanism to prevent damage when balance is lost."
+    },
+    {
+        q: "Мирославе, якщо ти хочеш побудувати власного робота — з чого краще почати?",
+        emoji: "🚀",
+        options: [
+            "Відразу купити всі дорогі деталі і починати будувати складного робота",
+            "Почати з Arduino, помигати LED-лампочкою і написати першу програму мовою C++",
+            "Спочатку навчитись малювати схеми роботів на папері 5 років"
+        ],
+        correct: 1,
+        explanation: "✅ Чудово! Найкращий початок — Arduino Starter Kit! Напиши першу програму: зроби мигання LED-лампочки. Потім підключи кнопку, датчики. Потім мотори. Крок за кроком — і через рік ти зможеш побудувати власного робота! Every expert was once a beginner — start small, learn step by step, and dream big! 🚀"
+    }
+];
+
+let quizAnswered = 0;
+let quizScore = 0;
+
+function renderQuiz() {
+    const c = document.getElementById('quiz-container');
+    c.innerHTML = '';
+    quizAnswered = 0;
+    quizScore = 0;
+    document.getElementById('quiz-score-bar').classList.add('hidden');
+    document.getElementById('quiz-reset-btn').classList.add('hidden');
+
+    quizData.forEach((item, qi) => {
+        const optionsHtml = item.options.map((opt, oi) => `
+            <button class="quiz-option w-full text-left flex items-start gap-3 p-4 rounded-xl border-2 border-slate-200 bg-white hover:border-brand-400 hover:bg-brand-50 text-sm font-medium text-slate-700"
+                    onclick="answerQuiz(${qi}, ${oi}, this)">
+                <span class="flex-shrink-0 w-7 h-7 rounded-full border-2 border-slate-300 flex items-center justify-center text-xs font-bold text-slate-500">
+                    ${['A','B','C'][oi]}
+                </span>
+                <span class="mt-0.5">${opt}</span>
+            </button>
+        `).join('');
+
+        c.innerHTML += `
+        <div class="quiz-item bg-white rounded-2xl border border-slate-200 shadow-sm p-6 md:p-8" data-qi="${qi}">
+            <div class="flex items-start gap-4 mb-5">
+                <div class="flex-shrink-0 w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center font-black text-amber-700 text-sm">${qi+1}</div>
+                <div>
+                    <span class="text-2xl">${item.emoji}</span>
+                    <h4 class="text-base md:text-lg font-bold text-slate-900 mt-1">${item.q}</h4>
+                </div>
+            </div>
+            <div class="space-y-3">${optionsHtml}</div>
+            <div id="explain-${qi}" class="hidden mt-4 p-4 rounded-xl bg-slate-50 border border-slate-200 text-sm text-slate-700 leading-relaxed"></div>
+        </div>`;
+    });
+}
+
+function answerQuiz(qi, oi, btn) {
+    const item = quizData[qi];
+    const container = document.querySelector(`.quiz-item[data-qi="${qi}"]`);
+    const allBtns = container.querySelectorAll('.quiz-option');
+    const explainDiv = document.getElementById(`explain-${qi}`);
+
+    // Disable all options for this question
+    allBtns.forEach(b => b.classList.add('disabled'));
+
+    // Mark correct / wrong
+    allBtns[item.correct].classList.add('correct');
+    allBtns[item.correct].querySelector('span:first-child').innerHTML = '✓';
+
+    if (oi !== item.correct) {
+        btn.classList.add('wrong');
+        btn.querySelector('span:first-child').innerHTML = '✗';
+    } else {
+        quizScore++;
+    }
+
+    // Show explanation
+    explainDiv.textContent = item.explanation;
+    explainDiv.classList.remove('hidden');
+
+    quizAnswered++;
+
+    if (quizAnswered === quizData.length) {
+        const scoreBar = document.getElementById('quiz-score-bar');
+        const finalScore = document.getElementById('final-score');
+        const scoreMsg = document.getElementById('score-message');
+        const resetBtn = document.getElementById('quiz-reset-btn');
+
+        finalScore.textContent = `${quizScore} / ${quizData.length}`;
+        if (quizScore === 10) {
+            scoreMsg.textContent = "🏆 Ідеальний результат! Perfect score! Ти справжній інженер-робототехнік!";
+        } else if (quizScore >= 7) {
+            scoreMsg.textContent = "⭐ Чудово! Great job! Ти добре знаєш свого робота!";
+        } else if (quizScore >= 5) {
+            scoreMsg.textContent = "👍 Непогано! Not bad! Ще трохи вчись і будеш експертом!";
+        } else {
+            scoreMsg.textContent = "💪 Спробуй ще раз! Try again! Прочитай ще раз і ти все зрозумієш!";
+        }
+        scoreBar.classList.remove('hidden');
+        resetBtn.classList.remove('hidden');
+        scoreBar.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+}
+
+function resetQuiz() {
+    renderQuiz();
+    document.getElementById('quiz').scrollIntoView({ behavior: 'smooth' });
+}
+renderQuiz();
+
+// ─── SELECTION TOOLBAR ─────────────────────────────────────────────
+const selectionToolbar = document.getElementById('selection-toolbar');
+const ttsBtn = document.getElementById('tts-btn');
+const ttsIcon = document.getElementById('tts-icon');
+const ttsText = document.getElementById('tts-text');
+const translateBtn = document.getElementById('translate-btn');
+const translateIcon = document.getElementById('translate-icon');
+const translateText = document.getElementById('translate-text');
+const translationPopup = document.getElementById('translation-popup');
+const translationContent = document.getElementById('translation-content');
+const closeTranslationBtn = document.getElementById('close-translation');
+
+let selectedText = "";
+let currentAudio = null;
+let isPlaying = false;
+
+document.addEventListener('mouseup', (e) => {
+    if (selectionToolbar.contains(e.target) || translationPopup.contains(e.target)) return;
+    setTimeout(() => {
+        const selection = window.getSelection();
+        selectedText = selection.toString().trim();
+        if (selectedText.length > 0) {
+            const range = selection.getRangeAt(0);
+            const rect = range.getBoundingClientRect();
+            selectionToolbar.classList.remove('hidden');
+            translationPopup.classList.add('hidden');
+            selectionToolbar.style.top  = `${Math.max(10, rect.top + window.scrollY - 58)}px`;
+            selectionToolbar.style.left = `${Math.max(10, rect.left + window.scrollX + rect.width/2 - selectionToolbar.offsetWidth/2)}px`;
+            if (!isPlaying) resetTTSUI();
+        } else {
+            if (!isPlaying) selectionToolbar.classList.add('hidden');
+            translationPopup.classList.add('hidden');
+        }
+    }, 10);
+});
+
+selectionToolbar.addEventListener('mousedown', e => e.preventDefault());
+translationPopup.addEventListener('mousedown',  e => e.preventDefault());
+
+ttsBtn.addEventListener('click', async () => {
+    if (isPlaying && currentAudio) {
+        currentAudio.pause(); isPlaying = false;
+        selectionToolbar.classList.add('hidden'); resetTTSUI(); return;
+    }
+    if (!selectedText) return;
+    ttsIcon.className = 'ph ph-spinner animate-spin text-brand-400 text-lg';
+    ttsText.innerText = 'Loading...';
+    try {
+        const audioUrl = await generateTTSWithRetry(selectedText);
+        if (currentAudio) currentAudio.pause();
+        currentAudio = new Audio(audioUrl);
+        currentAudio.play(); isPlaying = true;
+        ttsIcon.className = 'ph-fill ph-stop-circle text-rose-400 text-lg';
+        ttsText.innerText = 'Stop';
+        currentAudio.onended = () => {
+            isPlaying = false;
+            selectionToolbar.classList.add('hidden'); resetTTSUI();
+        };
+    } catch (e) {
+        ttsIcon.className = 'ph-fill ph-warning-circle text-rose-400 text-lg';
+        ttsText.innerText = 'Error';
+    }
+});
+
+function resetTTSUI() {
+    ttsIcon.className = 'ph-fill ph-speaker-high text-brand-400 text-lg';
+    ttsText.innerText = 'Say it';
+}
+
+translateBtn.addEventListener('click', async () => {
+    if (!selectedText) return;
+    translateIcon.className = 'ph ph-spinner animate-spin text-sky-400 text-lg';
+    translateText.innerText = 'Translating...';
+    translationContent.innerText = 'Завантаження...';
+
+    const toolbarRect = selectionToolbar.getBoundingClientRect();
+    let leftPos = toolbarRect.left + window.scrollX;
+    if (leftPos + 360 > window.innerWidth) leftPos = window.innerWidth - 380;
+    translationPopup.style.top  = `${toolbarRect.bottom + window.scrollY + 10}px`;
+    translationPopup.style.left = `${Math.max(10, leftPos)}px`;
+    translationPopup.classList.remove('hidden');
+
+    const sys = "Переклади цей текст на українську мову. Контекст — навчальний сайт про робота для дитини 8 років. Якщо текст вже українською — переклади на англійську. Відповідай ТІЛЬКИ перекладом, без зайвих коментарів.";
+    try {
+        const result = await fetchGeminiWithRetry(selectedText, sys);
+        translationContent.innerText = result;
+    } catch {
+        translationContent.innerHTML = '<span class="text-rose-500">Помилка. Спробуй ще.</span>';
+    } finally {
+        translateIcon.className = 'ph-bold ph-translate text-sky-400 text-lg';
+        translateText.innerText = 'Translate it';
+    }
+});
+
+closeTranslationBtn.addEventListener('click', () => translationPopup.classList.add('hidden'));
+
+// ─── TTS ───────────────────────────────────────────────────────────
+async function generateTTSWithRetry(text, retries = 5) {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
+    const payload = {
+        contents: [{ parts: [{ text }] }],
+        generationConfig: {
+            responseModalities: ["AUDIO"],
+            speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Sulafat" } } }
+        },
+        model: "gemini-2.5-flash-preview-tts"
+    };
+    const delays = [1000, 2000, 4000, 8000, 16000];
+    for (let i = 0; i < retries; i++) {
+        try {
+            const resp = await fetch(url, { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(payload) });
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            const data = await resp.json();
+            const inlineData = data.candidates?.[0]?.content?.parts?.[0]?.inlineData;
+            if (!inlineData) throw new Error("No audio data");
+            const rateMatch = inlineData.mimeType.match(/rate=(\d+)/);
+            const sampleRate = rateMatch ? parseInt(rateMatch[1]) : 24000;
+            const pcmBuffer = base64ToArrayBuffer(inlineData.data);
+            const wavBlob = pcmToWav(pcmBuffer, sampleRate);
+            return URL.createObjectURL(wavBlob);
+        } catch(e) {
+            if (i === retries - 1) throw e;
+            await new Promise(r => setTimeout(r, delays[i]));
+        }
+    }
+}
+
+function base64ToArrayBuffer(base64) {
+    const bin = window.atob(base64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return bytes.buffer;
+}
+
+function pcmToWav(pcmData, sampleRate) {
+    const numCh = 1, bps = 16;
+    const byteRate  = sampleRate * numCh * (bps / 8);
+    const blockAlign = numCh * (bps / 8);
+    const dataSize  = pcmData.byteLength;
+    const buffer = new ArrayBuffer(44 + dataSize);
+    const view   = new DataView(buffer);
+    const ws = (off, str) => { for (let i=0;i<str.length;i++) view.setUint8(off+i, str.charCodeAt(i)); };
+    ws(0,'RIFF'); view.setUint32(4, 36+dataSize, true);
+    ws(8,'WAVE'); ws(12,'fmt '); view.setUint32(16,16,true);
+    view.setUint16(20,1,true); view.setUint16(22,numCh,true);
+    view.setUint32(24,sampleRate,true); view.setUint32(28,byteRate,true);
+    view.setUint16(32,blockAlign,true); view.setUint16(34,bps,true);
+    ws(36,'data'); view.setUint32(40,dataSize,true);
+    new Uint8Array(buffer,44).set(new Uint8Array(pcmData));
+    return new Blob([buffer], { type: 'audio/wav' });
+}
+
+async function playLine(text) {
+    if (currentAudio) currentAudio.pause();
+    try {
+        const audioUrl = await generateTTSWithRetry(text);
+        currentAudio = new Audio(audioUrl);
+        currentAudio.play();
+    } catch(e) { console.error("TTS error:", e); }
+}
+
+// ─── GEMINI LLM ────────────────────────────────────────────────────
+async function fetchGeminiWithRetry(prompt, systemInstruction, retries = 5) {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+    const payload = {
+        systemInstruction: { parts: [{ text: systemInstruction }] },
+        contents: [{ role: "user", parts: [{ text: prompt }] }]
+    };
+    const delays = [1000, 2000, 4000, 8000, 16000];
+    for (let i = 0; i < retries; i++) {
+        try {
+            const resp = await fetch(url, { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(payload) });
+            if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+            const data = await resp.json();
+            return data.candidates?.[0]?.content?.parts?.[0]?.text ?? "Немає відповіді";
+        } catch(e) {
+            if (i === retries - 1) throw e;
+            await new Promise(r => setTimeout(r, delays[i]));
+        }
+    }
+}
+
+// ─── AI ASSISTANT ──────────────────────────────────────────────────
+async function askAI() {
+    const input = document.getElementById('ask-ai-input');
+    const result = document.getElementById('ask-ai-result');
+    const btn = document.querySelector('[onclick="askAI()"]');
+    const question = input.value.trim();
+    if (!question) return;
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="ph ph-spinner animate-spin mr-2"></i> Думаю...';
+    result.classList.remove('hidden');
+    result.innerHTML = '<div class="animate-pulse text-slate-400">🤔 Думаю над відповіддю...</div>';
+
+    const sys = `Ти дружній помічник-вчитель для хлопчика Мирослава, 8 років. Мирослав вчиться про свого самобалансуючого робота ELEGOO Tumbller.
+Робот складається з: Arduino Nano (C++, керує моторами, балансуванням через гіроскоп, PID алгоритм), Raspberry Pi Zero 2W (Python/Flask, Wi-Fi сервер).
+Відповідай українською мовою, просто і захопливо. Додавай англійські терміни в дужках. Максимум 4-5 речень. Використовуй смайли для живості!`;
+
+    try {
+        const text = await fetchGeminiWithRetry(question, sys);
+        result.innerHTML = marked.parse(text);
+    } catch {
+        result.innerHTML = '<span class="text-rose-400">Помилка з\'єднання. Спробуй ще раз!</span>';
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="ph-fill ph-sparkle mr-2"></i> Запитати AI — Ask AI';
+    }
+}
+</script>
+</body>
+</html>
